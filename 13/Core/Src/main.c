@@ -1,21 +1,21 @@
 /* USER CODE BEGIN Header */
 /**
-  ******************************************************************************
-  * @file           : main.c
-  * @brief          : Main program body
-  ******************************************************************************
-  * @attention
-  *
-  * <h2><center>&copy; Copyright (c) 2021 STMicroelectronics.
-  * All rights reserved.</center></h2>
-  *
-  * This software component is licensed by ST under BSD 3-Clause license,
-  * the "License"; You may not use this file except in compliance with the
-  * License. You may obtain a copy of the License at:
-  *                        opensource.org/licenses/BSD-3-Clause
-  *
-  ******************************************************************************
-  */
+ ******************************************************************************
+ * @file           : main.c
+ * @brief          : Main program body
+ ******************************************************************************
+ * @attention
+ *
+ * <h2><center>&copy; Copyright (c) 2021 STMicroelectronics.
+ * All rights reserved.</center></h2>
+ *
+ * This software component is licensed by ST under BSD 3-Clause license,
+ * the "License"; You may not use this file except in compliance with the
+ * License. You may obtain a copy of the License at:
+ *                        opensource.org/licenses/BSD-3-Clause
+ *
+ ******************************************************************************
+ */
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
@@ -32,6 +32,8 @@
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
+#define EEPROM_ADDR 0b10100000
+#define IOEXPD_ADDR 0b01000000
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -45,6 +47,17 @@ I2C_HandleTypeDef hi2c1;
 UART_HandleTypeDef huart2;
 
 /* USER CODE BEGIN PV */
+uint8_t eepromExampleWriteFlag = 0;
+uint8_t eepromExampleReadFlag = 0;
+uint8_t IOExpdrExampleWriteFlag = 0;
+uint8_t IOExpdrExampleReadFlag = 0;
+uint8_t eepromDataReadBack[4];
+uint8_t IOExpdrDataReadBack;
+uint8_t IOExpdrDataWrite ;
+uint64_t ButtonB1[2];
+uint8_t Rdata = 0;
+uint8_t data;
+uint16_t state = 0;
 
 /* USER CODE END PV */
 
@@ -54,6 +67,12 @@ static void MX_GPIO_Init(void);
 static void MX_USART2_UART_Init(void);
 static void MX_I2C1_Init(void);
 /* USER CODE BEGIN PFP */
+void EEPROMWriteExample();
+void EEPROMReadExample();
+
+void IOExpenderInit();
+void IOExpenderReadPinA();
+void IOExpenderWritePinB();
 
 /* USER CODE END PFP */
 
@@ -93,17 +112,42 @@ int main(void)
   MX_USART2_UART_Init();
   MX_I2C1_Init();
   /* USER CODE BEGIN 2 */
-
+  HAL_Delay(100);
+  IOExpenderInit();
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
-  while (1)
-  {
+	while (1) {
+		ButtonB1[0] = HAL_GPIO_ReadPin(GPIOC, GPIO_PIN_13);
+		switch(state)
+		{
+			case 0:
+				if(ButtonB1[0] == 0 && ButtonB1[1] == 1)
+				{
+					IOExpenderReadPinA();
+					HAL_Delay(100);
+					EEPROMWriteExample();
+					state = 1;
+					break;
+				}
+
+			case 1:
+				 if(ButtonB1[0] == 1 && ButtonB1[1] == 0)
+				{
+					EEPROMReadExample();
+					HAL_Delay(100);
+					IOExpenderWritePinB();
+					state = 0;
+					break;
+				}
+		}
+		ButtonB1[1] = ButtonB1[0];
+
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
-  }
+	}
   /* USER CODE END 3 */
 }
 
@@ -167,7 +211,7 @@ static void MX_I2C1_Init(void)
 
   /* USER CODE END I2C1_Init 1 */
   hi2c1.Instance = I2C1;
-  hi2c1.Init.ClockSpeed = 100000;
+  hi2c1.Init.ClockSpeed = 400000;
   hi2c1.Init.DutyCycle = I2C_DUTYCYCLE_2;
   hi2c1.Init.OwnAddress1 = 0;
   hi2c1.Init.AddressingMode = I2C_ADDRESSINGMODE_7BIT;
@@ -252,7 +296,33 @@ static void MX_GPIO_Init(void)
 }
 
 /* USER CODE BEGIN 4 */
+void EEPROMWriteExample() {
 
+	HAL_I2C_Mem_Write_IT(&hi2c1, EEPROM_ADDR, 0x07, I2C_MEMADD_SIZE_16BIT,&IOExpdrDataReadBack, 1);
+
+}
+void EEPROMReadExample() {
+
+	HAL_I2C_Mem_Read_IT(&hi2c1, EEPROM_ADDR, 0x07, I2C_MEMADD_SIZE_16BIT,&IOExpdrDataWrite, 1);
+}
+void IOExpenderInit() {
+	//Init All
+	static uint8_t Setting[0x16] = { 0xFF, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+			0x00, 0x00, 0x00, 0x00, 0x00, 0xFF, 0x00, 0x00, 0x00, 0x00, 0x00,
+			0x00, 0x00, 0x00, 0x00 };
+	HAL_I2C_Mem_Write(&hi2c1, IOEXPD_ADDR, 0x00, I2C_MEMADD_SIZE_8BIT, Setting,
+			0x16, 100);
+}
+void IOExpenderReadPinA() {
+
+	HAL_I2C_Mem_Read_IT(&hi2c1, IOEXPD_ADDR, 0x12, I2C_MEMADD_SIZE_8BIT, &IOExpdrDataReadBack, 1);
+
+}
+void IOExpenderWritePinB() {
+
+	HAL_I2C_Mem_Write_IT(&hi2c1, IOEXPD_ADDR, 0x15, I2C_MEMADD_SIZE_8BIT,&IOExpdrDataWrite, 1);
+
+}
 /* USER CODE END 4 */
 
 /**
@@ -262,11 +332,10 @@ static void MX_GPIO_Init(void)
 void Error_Handler(void)
 {
   /* USER CODE BEGIN Error_Handler_Debug */
-  /* User can add his own implementation to report the HAL error return state */
-  __disable_irq();
-  while (1)
-  {
-  }
+	/* User can add his own implementation to report the HAL error return state */
+	__disable_irq();
+	while (1) {
+	}
   /* USER CODE END Error_Handler_Debug */
 }
 

@@ -1,0 +1,11 @@
+main.c:88:5:main	8	static
+main.c:158:6:SystemClock_Config	88	static
+main.c:203:13:MX_I2C1_Init	8	static
+main.c:237:13:MX_USART2_UART_Init	8	static
+main.c:270:13:MX_GPIO_Init	48	static
+main.c:299:6:EEPROMWriteExample	16	static
+main.c:304:6:EEPROMReadExample	16	static
+main.c:308:6:IOExpenderInit	24	static
+main.c:316:6:IOExpenderReadPinA	16	static
+main.c:321:6:IOExpenderWritePinB	16	static
+main.c:332:6:Error_Handler	4	static,ignoring_inline_asm
